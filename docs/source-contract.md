@@ -1,13 +1,15 @@
-# 合作来源约定
+# 复合资料来源约定
 
-## 资料边界
+## 获取与版本
 
-网关 measurement 文件为公开的台架分段交换子集：每段 header 指定 nextOffset、rawOffset、layout=contiguous|interleaved、metadataMode=replace|inherit；channel 按 group/path 标识，dataType、count、unit、scale 和 start/step 可逐段改变。metadataMode=inherit 仅省略重复元数据，仍须按该段 raw 区间接收新增样本，不代表通道消失。原始段是 LE float64 或 int16；nextOffset=-1 为未封口尾段。详见 fixtures/layout.json 的偏移表。
+`GET /deliveries` 返回获准交付件的 id、version、size、sha256、etag 和相对 href。正文支持单一闭区间 Range 及 If-Match；交付更换时旧 ETag 返回 412。来源地址由实际监听端口决定。完整原件相同不表示两个来源交付身份相同。
 
-## 本地服务
+## 文件支持范围
 
-来源和收件端是两个独立 HTTP 监听器。来源 `/health` 报告运行状态，`/__state` 返回当前情景；仅本地使用的 `POST /__control` 可改变来源情景，不属于收件端的业务 API。具体情景字段在 `provider/scenario.mjs` 的 `initialState` 中定义，切换只影响后续来源响应，不会改写已有收件。探查入口为 `/measurements`，请求相对链接必须以实际来源地址解释。
+交付为 CFB major version 3，小端、512 字节普通扇区、64 字节微型扇区，微型流阈值 4096。文件头首512字节之后才是扇区0。头部 DIFAT 列出 FAT 扇区，目录与 MiniFAT 通过各自 FAT 链连接；本地来源不需要额外 DIFAT 扇区。目录项128字节，名称是含终止符的 UTF-16LE，名称长度以字节计；left、right、child 是目录项编号而非字节偏移。对象类型0为空、1为存储、2为流、5为根。流长按目录项的64位无符号值解释，当前支持范围内高32位须为0。FREESECT=0xffffffff、ENDOFCHAIN=0xfffffffe、FATSECT=0xfffffffd。
 
-## 已有归档约定
+只有流对象且大小小于4096时，起始编号才属于根微型流和 MiniFAT；根对象自身的流始终经普通 FAT 读取。读取逻辑流按声明长度截取，链余量不是业务正文。目录树颜色不用于排序，目录名称在父存储下比较，不能把不同存储的同名流合并。目录未引用的空槽不是正文。已引用空项、越界、循环、共享分配和不完整链均不可声称内容已确认；影响范围需能回指目录与分配证据。不执行或解释宏、脚本和应用专有流内部内容。
 
-人工入口只接收人工确认过的结构化对象，并不验证自动来源完整性。`Archive.accept(source, identity, data, raw)` 把原始字节按摘要保存，并为同一来源与身份保留不同版本。`source` 和 `identity` 的选择必须与业务对象对应，正文摘要只用于原文复用，不代表两份业务记录相同。`src/transport.mjs` 仅提供一次请求，不包含自动分页、协议解释或领域恢复策略。
+## 现有产品
+
+来源 `POST /__control` 仅用于本地改变 mode=valid|chain-cycle|directory-cycle|shared-sector 与 revision，不属于新增收件 API。`/__state` 可查状态。人工收件接受已确认的 delivery、objectPath 与资料对象；`Archive.accept(source, identity, data, raw)` 保存原始字节并为相同身份保留版本，摘要只复用字节。`src/transport.mjs` 只有一次请求能力，自动遍历与流接收目前未提供。

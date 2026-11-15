@@ -1,4 +1,4 @@
-# 试验台分段测量文件的布局继承与通道接收
+# 旧式复合交付件的目录对象与内嵌流采集
 
 这是面向资料接收人员的 Node.js 服务。当前提供人工收件、原始字节保管、业务身份版本记录和收件查询；本地来源独立提供合作方交互环境。自动来源接入目前不提供，`POST /api/collect` 返回 501，不会把人工导入宣称为自动采集。
 
@@ -10,10 +10,10 @@
 
 ## 容器
 
-`docker build -t segmented-measurements:local .` 构建环境，`docker run --rm -p 3200:3200 -p 4200:4200 segmented-measurements:local` 启动。环境准备后，`docker run --rm --network none segmented-measurements:local sh -c 'npm run build && npm test && npm run demo'` 可离线检查现有功能。正式展示应从干净归档启动真实新增功能并展示当前输出，完整操作限时 90 秒；准备镜像不计入运行时间。
+`docker build -t compound-streams:local .` 构建环境，`docker run --rm -p 3200:3200 -p 4200:4200 compound-streams:local` 启动。环境准备后，`docker run --rm --network none compound-streams:local sh -c 'npm run build && npm test && npm run demo'` 可离线检查现有功能。正式展示应从干净归档启动真实新增功能并展示当前输出，完整操作限时 90 秒；准备镜像不计入运行时间。
 
 ## 接口与目录
 
-`POST /api/manual` 接收 `fixtures/manual.json` 同形的业务对象，`GET /api/records` 查询全部人工收件版本，`GET /health` 检查进程。人工记录身份字段为 delivery, segment, channel。同一身份与相同原文重复提交复用版本，内容变化保留旧版本；不同来源不能混淆。归档目录有按摘要保存的 blobs 和按业务身份保存的 receipts。
+`POST /api/manual` 接收 `fixtures/manual.json` 同形的业务对象，`GET /api/records` 查询全部人工收件版本，`GET /health` 检查进程。人工记录身份字段为 delivery, objectPath。同一身份与相同原文重复提交复用版本，内容变化保留旧版本；不同来源不能混淆。归档目录有按摘要保存的 blobs 和按业务身份保存的 receipts。
 
 `src/` 为收件与传输，`provider/` 为独立来源服务，`fixtures/` 保留来源字节与人工记录，`test/` 验证现有行为。协议范围与局部身份约定见 `docs/source-contract.md`，该文档不规定新增接入的架构。

@@ -1,9 +1,8 @@
 {
-  "name": "试验台分段测量文件的布局继承与通道接收",
-  "probe": "/measurements",
+  "name": "旧式复合交付件的目录对象与内嵌流采集",
+  "probe": "/deliveries",
   "identityFields": [
     "delivery",
-    "segment",
-    "channel"
+    "objectPath"
   ]
 }

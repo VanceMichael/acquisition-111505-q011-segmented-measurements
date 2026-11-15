@@ -1,10 +1,5 @@
 {
-  "delivery": "endurance-1",
-  "segment": 0,
-  "channel": "rig/load",
-  "unit": "N",
-  "samples": [
-    1.5,
-    2.5
-  ]
+  "delivery": "cabinet-a",
+  "objectPath": "/ObjectPool/Summary",
+  "text": "人工确认摘要"
 }
