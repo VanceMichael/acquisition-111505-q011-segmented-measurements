@@ -1,0 +1,9 @@
+{
+  "name": "试验台分段测量文件的布局继承与通道接收",
+  "probe": "/measurements",
+  "identityFields": [
+    "delivery",
+    "segment",
+    "channel"
+  ]
+}
