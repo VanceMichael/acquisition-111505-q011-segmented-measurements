@@ -12,4 +12,4 @@
 
 ## 现有产品
 
-来源 `POST /__control` 仅用于本地改变 mode=valid|chain-cycle|directory-cycle|shared-sector 与 revision，不属于新增收件 API。`/__state` 可查状态。人工收件接受已确认的 delivery、objectPath 与资料对象；`Archive.accept(source, identity, data, raw)` 保存原始字节并为相同身份保留版本，摘要只复用字节。`src/transport.mjs` 只有一次请求能力，自动遍历与流接收目前未提供。
+来源 `POST /__control` 仅用于本地改变 mode=valid|chain-cycle|directory-cycle|shared-sector 与 revision，不属于新增收件 API。`/__state` 可查状态。人工收件接受已确认的 delivery、objectPath 与资料对象；`Archive.accept(source, identity, data, raw)` 保存原始字节并为相同身份保留版本，摘要只复用字节。`src/collect.mjs` 遍历来源交付件、整件校验后逐流独立确认归档；`src/claim.mjs` 按收件登记的目录位置与 ETag 回源领取流字节，交付更换后旧位置返回 409。`src/transport.mjs` 提供单次请求能力，范围与条件请求经请求头传递。

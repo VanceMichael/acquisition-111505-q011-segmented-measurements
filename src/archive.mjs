@@ -49,6 +49,12 @@ export class Archive {
     const names = (await readdir(join(this.directory, 'receipts'))).filter(name => name.endsWith('.json')).sort();
     return Promise.all(names.map(async name => JSON.parse(await readFile(join(this.directory, 'receipts', name), 'utf8'))));
   }
+  async record(key) {
+    if (!/^[0-9a-f]{64}$/.test(key)) return null;
+    await this.tail;
+    try { return JSON.parse(await readFile(join(this.directory, 'receipts', `${key}.json`), 'utf8')); }
+    catch (error) { if (error.code === 'ENOENT') return null; throw error; }
+  }
   async bytes(sha256) {
     if (!/^[0-9a-f]{64}$/.test(sha256)) throw new Error('摘要格式无效');
     return readFile(join(this.directory, 'blobs', sha256));
