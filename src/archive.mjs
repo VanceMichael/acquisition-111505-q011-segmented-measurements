@@ -22,7 +22,19 @@ export class Archive {
     try { await rename(temporary, path); }
     catch (error) { await unlink(temporary).catch(() => {}); throw error; }
   }
-  async accept(source, identity, data, raw) {
+  // Content-addressed blob storage. Storing the same bytes twice is a no-op,
+  // which is what lets a repeated collection of one original reuse the same
+  // envelope and stream identities instead of creating a second copy.
+  async store(raw) {
+    const bytes = Buffer.isBuffer(raw) ? raw : Buffer.from(raw);
+    const sha256 = digest(bytes);
+    await this.atomic(join(this.directory, 'blobs', sha256), bytes);
+    return { sha256, size: bytes.length };
+  }
+  // `fingerprint` lets callers keep volatile observation metadata (for example
+  // a supplier revision counter) in the version while still treating identical
+  // content as the same version.
+  async accept(source, identity, data, raw, options = {}) {
     const operation = async () => {
       const bytes = Buffer.isBuffer(raw) ? raw : Buffer.from(raw);
       const sha256 = digest(bytes);
@@ -32,11 +44,13 @@ export class Archive {
       let previous = { source, identity, versions: [] };
       try { previous = JSON.parse(await readFile(path, 'utf8')); }
       catch (error) { if (error.code !== 'ENOENT') throw error; }
-      const encoded = JSON.stringify(data);
-      const existing = previous.versions.find(item => item.sha256 === sha256 && JSON.stringify(item.data) === encoded);
+      const fingerprint = options.fingerprint ?? JSON.stringify(data);
+      const existing = previous.versions.find(item => item.sha256 === sha256 && (item.fingerprint ?? JSON.stringify(item.data)) === fingerprint);
       if (existing) return { receipt: key, version: existing.version, duplicate: true, sha256 };
       const version = previous.versions.length + 1;
-      previous.versions.push({ version, sha256, data, receivedAt: new Date().toISOString() });
+      const entry = { version, sha256, data, receivedAt: new Date().toISOString() };
+      if (options.fingerprint !== undefined) entry.fingerprint = fingerprint;
+      previous.versions.push(entry);
       await this.atomic(path, Buffer.from(JSON.stringify(previous)));
       return { receipt: key, version, duplicate: false, sha256 };
     };
@@ -48,6 +62,14 @@ export class Archive {
     await this.tail;
     const names = (await readdir(join(this.directory, 'receipts'))).filter(name => name.endsWith('.json')).sort();
     return Promise.all(names.map(async name => JSON.parse(await readFile(join(this.directory, 'receipts', name), 'utf8'))));
+  }
+  key(source, identity) {
+    return digest(Buffer.from(JSON.stringify([source, identity])));
+  }
+  async record(key) {
+    if (!/^[0-9a-f]{64}$/.test(String(key))) throw new Error('收件编号格式无效');
+    await this.tail;
+    return JSON.parse(await readFile(join(this.directory, 'receipts', `${key}.json`), 'utf8'));
   }
   async bytes(sha256) {
     if (!/^[0-9a-f]{64}$/.test(sha256)) throw new Error('摘要格式无效');
